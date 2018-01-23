@@ -1,7 +1,7 @@
 .POSIX:
 CXX     = clang++-6.0
 #CXX     = g++
-CXXFLAGS = -O3 -std=c++17 -pedantic -Wall -Wextra
+CXXFLAGS = -g -O3 -std=c++17 -pedantic -Wall -Wextra
 
 BIN=shuffle_ssd
 
@@ -25,3 +25,9 @@ depend: .depend
 	$(CXX) $(CXXFLAGS) -MM $^ -MF  ./.depend;
 
 include .depend
+
+tests:
+	cd test; $(MAKE) $(MFLAGS)
+
+clean-test:
+	cd test; $(MAKE) $(MFLAGS) clean

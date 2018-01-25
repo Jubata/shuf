@@ -10,6 +10,8 @@
 #include <vector>
 #include <bitset>
 #include <malloc.h>
+#include <ctime>
+#include <cstring>
 
 #include "random_merge_tree.h"
 #include "lines_index.h"
@@ -44,21 +46,34 @@ int Shuffler::readFile(const char* fname) {
   while (!feof(f)) {
     fputs("reading input file\n", stderr);
     
+    clock_t c1 = clock();
+
     size_t read = std::fread(&fileBuf[prefix], 1, fileBuf.size() - prefix, f);
 
+    clock_t c2 = clock();
+
+    double elapsed_secs =  double(c2 - c1) / CLOCKS_PER_SEC;
+    std::cerr << "mbytes/s "<< (read / elapsed_secs / 1048576.0 ) << "\n";
+    
     size_t bufSize = prefix + read;
 
     fputs("indexing\n", stderr);
     size_t start = 0;
-    for (size_t i = prefix; i < bufSize; i++) {
-      if (fileBuf[i] == '\n') {
-        uint8_t lenByte = lineSize.addLine(start+1, i); //exclude leading '\n'
-        linesIndex.addLine(start); //include leading len8 byte
-        fileBuf[start] = lenByte; //overwrite leading len8 byte
-        start = i;
-      }
+
+    uint8_t* ptr = (uint8_t*)memchr(&fileBuf[0] + prefix, '\n', bufSize - prefix); //bufSize
+    while(ptr) {
+      auto end = ptr - &fileBuf[0];
+      uint8_t lenByte = lineSize.addLine(start+1, end); //exclude leading '\n'
+      linesIndex.addLine(start); //include leading len8 byte
+      fileBuf[start] = lenByte; //overwrite leading len8 byte
+      start = end;
+      ptr = (uint8_t*)memchr(&fileBuf[0] + end + 1, '\n', bufSize - end - 1); //bufSize
     }
-    
+
+    clock_t c3 = clock();
+    elapsed_secs =  double(c3 - c2) / CLOCKS_PER_SEC;
+    std::cerr << "mbytes/s "<< (read / elapsed_secs / 1048576.0 ) << "\n";
+
     //last line doesn't have trailing '\n'. So add the line manually
     if(feof(f)) {
       uint8_t lenByte = lineSize.addLine(start+1, bufSize);
@@ -110,7 +125,8 @@ int Shuffler::readFile(const char* fname) {
 }
 
 int main(int argc, char* argv[]) {
- 
+  atexit (TempFiles::cleanup);
+
   if (argc == 3) {
     Shuffler shuffler(atol(argv[2]));
     if (-1 == shuffler.readFile(argv[1])) {

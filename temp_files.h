@@ -15,6 +15,7 @@ struct TempFiles {
     FILE* f = fdopen(descr, "w+");
     tempFiles.push_back(f);
     TempFiles::linesCount.push_back(linesCount);
+    onNewTempFile(tmpl);
     return f;
   }
   
@@ -35,4 +36,9 @@ struct TempFiles {
       fseek(f, off, whence);
     }
   }
+
+  static void cleanup();
+
+private:
+  void onNewTempFile(const char* name);
 };
